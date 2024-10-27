@@ -7,6 +7,7 @@ from player import Player
 class GameInstance:
     def __init__(self):
         pygame.init()
+        self.player = Player(name="")
 
         try:
             pygame.mixer.music.load("reverb.wav")
@@ -19,8 +20,13 @@ class GameInstance:
         self.states = {
             "title_screen": TitleScreenState(self),
             "confirm_quit": ConfirmQuitState(self),
+            "component_menu": ComponentsMenuState(self),
+            "text_interact": TextInteraction(self),
+            "map_explore": MapExploration(self),
+            "combat": CombatSystem(self),
             "begin_new_game": BeginNewGameState(self),
             "dream_sequence": DreamSequenceState(self),
+            "tutorial_interaction": TutorialState(self),
         }
         self.change_state("title_screen")
 
@@ -31,7 +37,6 @@ class GameInstance:
             print(f"Error: State '{state_name}' does not exist.")
 
     def start_new_game(self):
-        self.player = Player(name="")
         self.change_state("begin_new_game")
         
 

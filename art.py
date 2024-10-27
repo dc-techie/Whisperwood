@@ -56,6 +56,10 @@ class Art:
 _/         \__
 """
 
+    @classmethod
+    def get_mag_art(cls):
+        return cls.merchant_art_good.split('\n')
+
     merchant_art_neutral = r"""
      ___      
   __[___]__   
@@ -172,7 +176,7 @@ O              O
     (_)      (_)          
    (_, \     / ,_)       
      \_{     }_/         
-     ~~┼─────┼~~         
+     ~~|─────|~~         
        /◌   ◌\           
       (       )          
        \     /           
@@ -192,6 +196,11 @@ O              O
  \     \
   `^^^^^
 """
+
+    @classmethod
+    def get_wisp_art(cls):
+        return cls.wisp_art.split('\n')
+
     deer_art = r"""
 (             )           
  `--(_   _)--'            
@@ -258,3 +267,6 @@ O              O
 *      /   \_|  \_|                     \_|  \_|          
 
 """
+    @classmethod
+    def get_nw_art(cls):
+        return cls.natures_wrath_art.split('\n')
