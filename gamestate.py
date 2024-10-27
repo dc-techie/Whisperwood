@@ -27,7 +27,7 @@ class TitleScreenState(GameState):
         self.title_font = pygame.font.SysFont("Courier New", ast.TS_TITLE_FONT_SZ)
         self.option_font = pygame.font.SysFont("Courier New", ast.TS_OPTION_FONT_SZ)
         self.selection_index = 0
-        self.title_options = ["New Game", "Load Game", "Options", "Quit"]
+        self.title_options = ["New Game", "Load Game", "Options", "Quit", "Dev Stuff"]
 
     def update(self):
         self.handle_events()
@@ -92,6 +92,8 @@ class TitleScreenState(GameState):
             x = 0 # placeholder
         elif self.title_options[self.selection_index] == 'Quit':
             self.game_instance.change_state("confirm_quit")
+        elif self.title_options[self.selection_index] == 'Dev Stuff':
+            self.game_instance.change_state("component_menu")
 
 
 ######## QUIT CONFIRMATION SCREEN FUNCTIONALITY ########
@@ -143,6 +145,56 @@ class ConfirmQuitState(GameState):
             self.game_instance.change_state("title_screen")
 
 
+######## COMPONENTS MENU STATE ########
+
+
+class ComponentsMenuState(GameState):
+    def __init__(self, game_instance):
+        super().__init__()
+        self.game_instance = game_instance
+        self.title_font = pygame.font.SysFont("Courier New", ast.TS_TITLE_FONT_SZ)
+        self.option_font = pygame.font.SysFont("Courier New", ast.TS_OPTION_FONT_SZ)
+        self.selection_index = 0
+        self.title_options = ['TextInteraction', 'MapExploration', 'CombatSystem', 'Back']
+
+    def update(self):
+        self.handle_events()
+
+    def render(self, screen):
+        screen.fill(Colors.BLACK)
+
+        for i, option in enumerate(self.title_options):
+            color = Colors.RED if i == self.selection_index else Colors.WHITE
+            option_surface = self.option_font.render(option, True, color)
+            option_rect = option_surface.get_rect(center=(200, 200 + i * (ast.TS_OPTION_FONT_SZ + ast.TS_OPTION_SPACING)))
+            screen.blit(option_surface, option_rect)
+
+        pygame.display.flip()
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    self.selection_index = (self.selection_index - 1) % len(self.title_options)
+                elif event.key == pygame.K_s:
+                    self.selection_index = (self.selection_index + 1) % len(self.title_options)
+                elif event.key == pygame.K_RETURN:
+                    self.select_option()
+    
+    def select_option(self):
+        if self.title_options[self.selection_index] == 'TextInteraction':
+            self.game_instance.change_state("text_interact")
+        elif self.title_options[self.selection_index] == 'MapExploration':
+            self.game_instance.change_state("map_explore")
+        elif self.title_options[self.selection_index] == 'CombatSystem':
+            self.game_instance.change_state("combat")
+        elif self.title_options[self.selection_index] == 'Back':
+            self.game_instance.change_state("title_screen")
+
+
 ######## INITIAL NEW GAME FUNCTIONALITY ########
 
 
@@ -152,7 +204,6 @@ class BeginNewGameState(GameState):
         self.game_instance = game_instance
         self.name_input = ""
         
-        # Text stages
         self.text_stages = [
             "You hear a whisper. 'Hello, what is your name?'",
             "The voice replies. 'Of course, but then again, I already knew that..'",
@@ -195,7 +246,6 @@ class BeginNewGameState(GameState):
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if self.awaiting_name_input:
-                    # Handle name input events
                     if event.key == pygame.K_RETURN:
                         if self.name_input:
                             self.game_instance.player.name = self.name_input
@@ -308,8 +358,7 @@ class DreamSequenceState(GameState):
         next_y = self.player_pos[1]
 
         if self.dream_map[next_x][next_y] == 'S':
-            self.game_instance.change_state("title_screen")
-            return
+            self.game_instance.change_state("tutorial_interaction")
 
         if next_x >= 0:
             self.dream_map[self.player_pos[0]][self.player_pos[1]] = '#'
@@ -319,4 +368,340 @@ class DreamSequenceState(GameState):
             if self.current_dialogue_index < len(self.dialogues) - 1:
                 self.current_dialogue_index += 1
 
+class TutorialState(GameState):
+    def __init__(self, game_instance):
+        super().__init__()
+        self.game_instance = game_instance
+        
+        self.wisp_art = Art.get_wisp_art()
+        
+        self.options = ["Fight", "Act", "Item", "Flee"]
+        self.selected_option = 0 
+
+        self.player = self.game_instance.player
+
+        self.font = pygame.font.SysFont("Courier New", ast.DIALOGUE_FONT_SZ)
+        self.line_spacing = 30 
+
+    def render(self, screen):
+        screen.fill(Colors.BLACK)
+
+        self.draw_wisp_art(screen)
+
+        pygame.draw.line(screen, Colors.LIGHT_GRAY, (150, 450), (1050, 450), 2)
+
+        self.draw_player_stats(screen)
+
+        self.draw_options(screen)
+
+        pygame.display.flip()
+
+
+
+    def draw_wisp_art(self, screen):
+        y = 50
+        for line in self.wisp_art:
+            text_surface = self.font.render(line, True, Colors.GREEN)
+            text_rect = text_surface.get_rect(center=(600, y))
+            screen.blit(text_surface, text_rect)
+            y += self.line_spacing
+
+    def draw_player_stats(self, screen):
+        stats_text = self.player.display_player_stats() 
+        stats_surface = self.font.render(stats_text, True, Colors.LIGHT_GRAY)
+        stats_rect = stats_surface.get_rect(center=(600, 500))
+        screen.blit(stats_surface, stats_rect)
+
+    def draw_options(self, screen):
+        y_start = 550
+        x_pos = 300
+
+        for i, option in enumerate(self.options):
+            color = Colors.YELLOW if i == self.selected_option else Colors.LIGHT_GRAY
+            option_surface = self.font.render(option, True, color)
+            screen.blit(option_surface, (x_pos, y_start))
+            y_start += 50
+
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    self.selected_option = (self.selected_option - 1) % len(self.options)
+                elif event.key == pygame.K_s:
+                    self.selected_option = (self.selected_option + 1) % len(self.options)
+                elif event.key == pygame.K_RETURN:
+                    self.handle_option_select()
     
+    def handle_option_select(self):
+        selected_action = self.options[self.selected_option]
+        if selected_action == "Fight":
+            x=0# placeholder
+        elif selected_action == "Act":
+            x=0# placeholder
+        elif selected_action == "Item":
+            x=0# placeholder
+        elif selected_action == "Flee":
+            x=0 # placeholder
+
+class TextInteraction(GameState):
+    def __init__(self, game_instance):
+        super().__init__()
+        self.game_instance = game_instance
+        
+        self.wisp_art = Art.get_mag_art()
+        
+        self.options = ["Buy", "Sell", "Talk", "Back"]
+        self.selected_option = 0 
+
+        self.player = self.game_instance.player
+
+        self.font = pygame.font.SysFont("Courier New", ast.DIALOGUE_FONT_SZ)
+        self.line_spacing = 30 
+
+    def render(self, screen):
+        screen.fill(Colors.BLACK)
+
+        self.draw_wisp_art(screen)
+
+        self.draw_options(screen)
+
+        pygame.display.flip()
+
+    def draw_wisp_art(self, screen):
+        y = 50
+        for line in self.wisp_art:
+            text_surface = self.font.render(line, True, Colors.GREEN)
+            text_rect = text_surface.get_rect(center=(600, y))
+            screen.blit(text_surface, text_rect)
+            y += self.line_spacing
+
+    def draw_player_stats(self, screen):
+        stats_text = self.player.display_player_stats() 
+        stats_surface = self.font.render(stats_text, True, Colors.LIGHT_GRAY)
+        stats_rect = stats_surface.get_rect(center=(600, 500))
+        screen.blit(stats_surface, stats_rect)
+
+    def draw_options(self, screen):
+        y_start = 550
+        x_pos = 300
+
+        for i, option in enumerate(self.options):
+            color = Colors.YELLOW if i == self.selected_option else Colors.LIGHT_GRAY
+            option_surface = self.font.render(option, True, color)
+            screen.blit(option_surface, (x_pos, y_start))
+            y_start += 50
+
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    self.selected_option = (self.selected_option - 1) % len(self.options)
+                elif event.key == pygame.K_s:
+                    self.selected_option = (self.selected_option + 1) % len(self.options)
+                elif event.key == pygame.K_RETURN:
+                    self.handle_option_select()
+    
+    def handle_option_select(self):
+        selected_action = self.options[self.selected_option]
+        if selected_action == "Buy":
+            x=0# placeholder
+        elif selected_action == "Sell":
+            x=0# placeholder
+        elif selected_action == "Talk":
+            x=0# placeholder
+        elif selected_action == "Back":
+            x=0 # placeholder
+
+class MapExploration(GameState):
+    def __init__(self, game_instance):
+        super().__init__()
+        self.game_instance = game_instance
+        
+        self.forest_map = [
+            ['Y','Y','T','T','T','Y','T','T','Y','Y','Y','8','8','8','T','T','T','Y','T','T','T','T','Y','Y','T','T','T','8','8','8','8','8','Y','8','8','Y','8','8','8','8','8','8','T','T',',',',',',','.','.','.','.','.',',',',',',',',',',',',',',',','],
+            ['T','T','Y','T','T','T','Y','Y','Y','T','8','8','8','8','8','T','T','T','Y','T','T','T','T','T','Y','Y','Y','T','T','T','Y','Y','T','Y','T','T','T','T','T','T',',',',',',','.','.','.','.','.','.',',',',','.','.',',',',',',',',','.','.',','],
+            ['T','T','T','Y','T','T','T','T','T','T','T','T','8','8','T','T','T','T','T','T','T','T','T','Y','Y','T','T','T','T','T','Y','T','T','T','Y','T','T','Y','Y','T',',',',',',',',',',',',',',','.','.','.','T',',',',',',',',','T','T','.','.','.'],
+            ['Y','Y','T','T','T','T','8','8','8','T','T','T','T','T','T','T','T','8','8','8','8','Y','Y','Y','Y','Y','T','T','T','Y','Y','Y','Y','T','T','T','T','T','T','T','T','T','T',',',',',',',',',',','T','T','T',',',',',',',',',',','Y','Y','T','T'],
+            ['Y','Y','Y','Y','Y','8','8','8','8','8','8','T','T','T','T','T','8','8','8','8','8','8','8','8','Y','Y','Y','Y','Y','Y','Y','8','8','8','8','T','T','T','T','Y','T','T','T','T','T','Y','Y','T','T','T','Y','T','T','T','T','Y','Y','T','T','Y'],
+            ['Y','Y','Y','Y','8','8','8','8','8','8','8','8','8','8','T','T','T','8','8','8','8','8','8','8','8','Y','Y','Y','Y','Y','8','8','8','8','8','8','8','8','T','T','T','T','T','Y','T','T','T','T','Y','Y','Y','Y','T','T','T','Y','Y','Y','T','T'],
+            ['Y','Y','Y','Y','Y','Y','8','8','8','8','8','8','T','T','T','T','T','T','T','T','8','8','8','8','Y','Y','Y','Y','8','8','8','8','8','8','8','8','8','8','8','8','8','8','Y','Y','Y','T','T','T','T','T','Y','Y','Y','Y','Y','T','T','T','T','Y'],
+            ['Y','8','8','8','8','Y','Y','Y','8','8','8','8','8','8','8','T','T','T','8','8','8','Y','8','8','8','8','8','8','8','8','T','T','T','T','T','8','8','8','8','Y','T','T','T','T','Y','Y','Y','Y','T','T','T','Y','T','T','T','Y','T','Y','Y','T'],
+            ['8','8','8','Y','8','8','T','T','T','T','8','8','8','8','8','8','8','T','T','T','T','T','8','8','8','8','8','8','8','8','8','8','8','8','8','Y','Y','8','Y','8','T','T','T','T','Y','Y','T','T','T','T','T','Y','Y','T','Y','Y','Y','T','Y','T'],
+            ['T','Y','T','T','Y','T','T','T','8','8','8','T','T','T','T','T','8','8','8','8','8','T','T','T','T','T','T','T','8','8','8','8','8','8','8','8','T','T','T','Y','T','T','T','T','T','Y','T','T','T','Y','T','T','T','T','T','T','Y','T','T','Y'],
+            ['T','T','T','T',',',',',',',',',',',',',',',',','T','T','8','8','8','8','8','T','T','T',',',',',',','T','T','T','T','T','T','T','8','8','8','8','8','8','8','8','T','T','T','.','.','T','T','T','8','8','8','8','Y','8','8','T','T','T','T','T'],
+            [',',',',',',',',',','Y','.','.','.','.',',',',',',','T','T','T','T','T','T',',',',',',',',',',',',','T','T',',',',','T','8','8','8','8','T','T','.','Y','Y','.','.','Y','.','.','T','T','T','T','8','8','8','8','Y','8','8','8','T','T','T','T'],
+            [',',',',',','.','.','.','.','.','Y',',',',',',','T','T','T','T','T','T','T',',',',',',','T','T','T','T','T',',',',',',','T','T','T','T','.','.','Y','.','.','.','Y','.','.','.','T','T','T','T','T','8','8','T','T','8','8','T','T','T',',',','],
+            [',',',',',','.','Y','.','.','.','.','Y','Y',',',',','T','T','T','T',',',',','.','.','Y',',',',','T','T','T','T','T','8','8','8','8','8','T','T','T',',',',',',','Y',',','T','T','8','8','8','8','8','T','T','T','8','8','8','8','T','T','T',','],
+            [',','Y',',',',',',','Y','.','.','.','.','.','.','Y','.','.','T','T','T',',',',','.','.',',','T','T','T','T','T','T','T','T','8','8','Y','8','T','T','T',',',',',',',',','T','8','8','T','T','8','8','8','T','T','T','8','8','T','T','T','T','T'],
+            ['T','T',',',',',',',',',',',',',',','.','.','Y','.','.','.','.','.','.','Y','.','.','.',',',',',',','T','T','T','T','T','T','T','8','8','8','8','8','8','T','T','T','T','T','T','8','8','8','8','8','8','8','8','8','8','8','8','T','T','T','T'],
+            ['T','T','T','T',',',',',',',',','Y','.','.','.','.',',','Y',',',',',',','.','.','.',',','Y',',',',','T','T','T','T','T','T','T','T','T','T','8','8','8','T','T','T','T','T','T','T','T','T','8','8','8','8','8','8','T','T','T','T','T','T','T'],
+            ['8','T','T','T','T',',',',',',',',',',',',',',',',',',',',',',','T','T','T',',',',',',',',',',',',',',','T','T','T','#','8','8','8','8','8','8','8','T','T','T','T','T','T','T','T','T','T','Y','Y','8','8','8','8','8','8','8','8','8','8','8'],
+            ['8','P','8','8','T','T',',',',',',',',',',',',',',',',','T','T','T','T',',',',',',',',',',',',','T','T','T','T','8','#','8','8','8','Y','Y','Y','Y','T','T','T','T','T','T','8','T','T','T','T','T','Y','Y','Y','Y','8','8','8','8','8','8','8'],
+            ['8','8','Y','Y','Y','Y','Y','Y','Y','Y','8','8','T','T','T','8','8','8','8','Y','Y','Y','8','8','8','8','8','8','8','V','8','Y','Y','Y','Y','Y','T','T','T','T','T','T','8','8','8','T','T','T','T','T','Y','Y','Y','Y','Y','Y','Y','8','8','8'],
+        ]
+
+        self.player_pos = [18, 1]
+        
+        self.current_dialogue_index = 0
+        
+        self.font = pygame.font.SysFont("Courier New", ast.DIALOGUE_FONT_SZ)
+
+    def update(self):
+        self.handle_events()
+    
+    def render(self, screen):
+        screen.fill(Colors.BLACK)
+        self.draw_forest_map(screen)  # Ensure the correct map is drawn
+        pygame.display.flip()
+
+    def draw_forest_map(self, screen):
+        tile_size = 20
+        start_x = (ast.SCREEN_WIDTH - (len(self.forest_map[0]) * tile_size)) // 2
+        start_y = (ast.SCREEN_HEIGHT - (len(self.forest_map) * tile_size)) // 2
+
+        for row in range(len(self.forest_map)):
+            for col in range(len(self.forest_map[row])):
+                tile = self.forest_map[row][col]
+                color = self.get_tile_color(tile)
+                pygame.draw.rect(screen, color, (start_x + col * tile_size, start_y + row * tile_size, tile_size, tile_size))
+
+    def get_tile_color(self, tile):
+        if tile == 'P':
+            return Colors.LIGHT_GRAY
+        elif tile == '#':
+            return Colors.DARK_GRAY
+        elif tile == '.':
+            return Colors.YELLOW
+        elif tile == ',':
+            return Colors.LIME_GREEN
+        elif tile == '8':
+            return Colors.DARK_GREEN
+        elif tile == 'T':
+            return Colors.GREEN
+        elif tile == 'Y':
+            return Colors.ORANGE
+        return Colors.CYAN  # Default color
+
+    def handle_events(self):
+        movement_keys = {
+            pygame.K_w: self.move_player_up,
+            pygame.K_s: self.move_player_down,
+            pygame.K_a: self.move_player_left,
+            pygame.K_d: self.move_player_right
+        }
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                move_func = movement_keys.get(event.key)
+                if move_func:
+                    move_func()
+
+    def move_player(self, delta_x, delta_y):
+        next_x = self.player_pos[0] + delta_x
+        next_y = self.player_pos[1] + delta_y
+
+        if 0 <= next_x < len(self.forest_map) and 0 <= next_y < len(self.forest_map[next_x]):
+            # Update the player's previous position
+            self.forest_map[self.player_pos[0]][self.player_pos[1]] = '#'
+            self.player_pos = [next_x, next_y]
+            # Update the player's current position
+            self.forest_map[self.player_pos[0]][self.player_pos[1]] = 'P'
+
+    def move_player_up(self):
+        self.move_player(-1, 0)
+
+    def move_player_down(self):
+        self.move_player(1, 0)
+
+    def move_player_left(self):
+        self.move_player(0, -1)
+
+    def move_player_right(self):
+        self.move_player(0, 1)
+
+
+class CombatSystem(GameState):
+    def __init__(self, game_instance):
+        super().__init__()
+        self.game_instance = game_instance
+        
+        self.wisp_art = Art.get_nw_art()
+        
+        self.options = ["Fight", "Act", "Item", "Flee"]
+        self.selected_option = 0 
+
+        self.player = self.game_instance.player
+
+        self.font = pygame.font.SysFont("Courier New", ast.DIALOGUE_FONT_SZ)
+        self.line_spacing = 30 
+
+    def render(self, screen):
+        screen.fill(Colors.BLACK)
+
+        self.draw_wisp_art(screen)
+
+        self.draw_player_stats(screen)
+
+        self.draw_options(screen)
+
+        pygame.display.flip()
+
+    def draw_wisp_art(self, screen):
+        y = 50
+        for line in self.wisp_art:
+            text_surface = self.font.render(line, True, Colors.GREEN)
+            text_rect = text_surface.get_rect(center=(600, y))
+            screen.blit(text_surface, text_rect)
+            y += self.line_spacing
+
+    def draw_player_stats(self, screen):
+        stats_text = self.player.display_player_stats() 
+        stats_surface = self.font.render(stats_text, True, Colors.LIGHT_GRAY)
+        stats_rect = stats_surface.get_rect(center=(600, 500))
+        screen.blit(stats_surface, stats_rect)
+
+    def draw_options(self, screen):
+        y_start = 550
+        x_pos = 300
+
+        for i, option in enumerate(self.options):
+            color = Colors.YELLOW if i == self.selected_option else Colors.LIGHT_GRAY
+            option_surface = self.font.render(option, True, color)
+            screen.blit(option_surface, (x_pos, y_start))
+            y_start += 50
+
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    self.selected_option = (self.selected_option - 1) % len(self.options)
+                elif event.key == pygame.K_s:
+                    self.selected_option = (self.selected_option + 1) % len(self.options)
+                elif event.key == pygame.K_RETURN:
+                    self.handle_option_select()
+    
+    def handle_option_select(self):
+        selected_action = self.options[self.selected_option]
+        if selected_action == "Fight":
+            x=0# placeholder
+        elif selected_action == "Act":
+            x=0# placeholder
+        elif selected_action == "Item":
+            x=0# placeholder
+        elif selected_action == "Flee":
+            x=0 # placeholder

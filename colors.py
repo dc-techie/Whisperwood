@@ -13,3 +13,4 @@ class Colors:
     LIME_GREEN = (128,255,0)
     GREEN = (0,204,0)
     PURPLE = (102,0,204)
+    DARK_GREEN = (0,51,0)

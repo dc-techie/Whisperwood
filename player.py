@@ -10,7 +10,7 @@ class Player:
         self.equipped_weapon = None
 
     def display_player_stats(self):
-        print(f"Name: {self.name}  HP: {self.hp}/{self.maxhp}  EXP: {self.exp}  Gold: {self.gold}")
+        return f"Name: {self.name}  HP: {self.hp}/{self.maxhp}  EXP: {self.exp}  Gold: {self.gold}"
 
     def take_damage(self, damage: int):
         self.hp -= damage
