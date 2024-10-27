@@ -1,12 +1,12 @@
 class Player:
     def __init__(self, name: str):
         self.name = name
-        self.hp = 50
-        self.maxhp = 50
+        self.hp = 100
+        self.maxhp = 100
         self.exp = 0
         self.game_over = False
         self.gold = 100
-        self.inventory = []
+        self.inventory = ['chicken leg', 'chicken leg']
         self.equipped_weapon = None
 
     def display_player_stats(self):
@@ -33,7 +33,7 @@ class Player:
     def equip_weapon(self, weapon):
         self.equipped_weapon = weapon
 
-    def increase_exp(self, amount: int):
+    def increase_exp(self):
         self.exp += 1
         self.maxhp += 10
         self.hp += 10

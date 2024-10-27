@@ -46,6 +46,7 @@ class GameInstance:
         clock = pygame.time.Clock()
 
         while True:
+            self.current_state.handle_events()
             self.current_state.update()
             self.current_state.render(screen)
             pygame.display.flip()
