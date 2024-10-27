@@ -1,0 +1,15 @@
+class Colors:
+    BLACK = (0,0,0)
+    DARK_GRAY = (32,32,32)
+    GRAY = (96,96,96)
+    LIGHT_GRAY = (192,192,192)
+    WHITE = (255,255,255)
+
+    RED = (204,0,0)
+    ORANGE = (204,102,0)
+    YELLOW = (204,204,0)
+    BLUE = (0,102,204)
+    CYAN = (0,204,204)
+    LIME_GREEN = (128,255,0)
+    GREEN = (0,204,0)
+    PURPLE = (102,0,204)
