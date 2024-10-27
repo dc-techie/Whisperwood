@@ -1,9 +1,11 @@
 import pygame
 import sys
 import time
+import random
 from assetstyles import AssetStyles as ast
 from art import Art
 from colors import Colors
+from enemy import Enemy
 
 # TODO: default game states, should probably not leave this as it is 
 class GameState:
@@ -248,7 +250,7 @@ class TextInteraction(GameState):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_w:
                     self.selected_option = (self.selected_option - 1) % len(self.options)
                 elif event.key == pygame.K_s:
@@ -404,6 +406,9 @@ class CombatSystem(GameState):
 
         pygame.display.flip()
 
+    def update(self):
+        self.handle_events()
+
     def draw_wisp_art(self, screen):
         y = 50
         for line in self.wisp_art:
@@ -434,7 +439,7 @@ class CombatSystem(GameState):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_w:
                     self.selected_option = (self.selected_option - 1) % len(self.options)
                 elif event.key == pygame.K_s:
@@ -480,7 +485,6 @@ class BeginNewGameState(GameState):
         self.awaiting_name_input = True
 
     def update(self):
-        self.handle_events()
         self.update_displayed_text()
 
     def render(self, screen):
@@ -637,27 +641,37 @@ class TutorialState(GameState):
         self.selected_option = 0 
 
         self.player = self.game_instance.player
+        self.enemy = Enemy(name="Wisp", hp=50, attack_power=10)
 
         self.font = pygame.font.SysFont("Courier New", ast.DIALOGUE_FONT_SZ)
-        self.line_spacing = 30 
+        self.line_spacing = 30
+
+        self.combat_action_message = ""
+        self.dialogue_display_time = 3  
+        self.dialogue_start_time = time.time()
+        self.combat_active = True
+
+    def update(self):
+        self.handle_events()
+        
+        if not self.combat_active and (time.time() - self.dialogue_start_time >= self.dialogue_display_time):
+            self.game_instance.change_state("title_screen")
 
     def render(self, screen):
         screen.fill(Colors.BLACK)
 
         self.draw_wisp_art(screen)
 
-        pygame.draw.line(screen, Colors.LIGHT_GRAY, (150, 450), (1050, 450), 2)
-
         self.draw_player_stats(screen)
+        self.draw_enemy_stats(screen)
 
         self.draw_options(screen)
+        self.draw_combat_action_message(screen)
 
         pygame.display.flip()
 
-
-
     def draw_wisp_art(self, screen):
-        y = 50
+        y = 200
         for line in self.wisp_art:
             text_surface = self.font.render(line, True, Colors.GREEN)
             text_rect = text_surface.get_rect(center=(600, y))
@@ -670,6 +684,12 @@ class TutorialState(GameState):
         stats_rect = stats_surface.get_rect(center=(600, 500))
         screen.blit(stats_surface, stats_rect)
 
+    def draw_enemy_stats(self, screen):
+        enemy_stats_text = self.enemy.display_enemy_stats()
+        enemy_stats_surface = self.font.render(enemy_stats_text, True, Colors.LIGHT_GRAY)
+        enemy_stats_rect = enemy_stats_surface.get_rect(center=(600, 100))
+        screen.blit(enemy_stats_surface, enemy_stats_rect)
+
     def draw_options(self, screen):
         y_start = 550
         x_pos = 300
@@ -680,27 +700,88 @@ class TutorialState(GameState):
             screen.blit(option_surface, (x_pos, y_start))
             y_start += 50
 
+    def draw_combat_action_message(self, screen):
+        action_surface = self.font.render(self.combat_action_message, True, Colors.LIGHT_GRAY)
+        action_rect = action_surface.get_rect(center=(600, 750))
+        screen.blit(action_surface, action_rect)
 
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_w:
                     self.selected_option = (self.selected_option - 1) % len(self.options)
                 elif event.key == pygame.K_s:
                     self.selected_option = (self.selected_option + 1) % len(self.options)
                 elif event.key == pygame.K_RETURN:
                     self.handle_option_select()
-    
+
     def handle_option_select(self):
         selected_action = self.options[self.selected_option]
         if selected_action == "Fight":
-            x=0# placeholder
+            self.player_attack()
         elif selected_action == "Act":
-            x=0# placeholder
+            self.player_act()
         elif selected_action == "Item":
-            x=0# placeholder
+            self.player_heal()
         elif selected_action == "Flee":
-            x=0 # placeholder
+            self.player_flee()
+
+        self.dialogue_start_time = time.time()
+    
+    def player_attack(self):
+        damage = self.player.equipped_weapon.attack_power if self.player.equipped_weapon else 10
+        self.enemy.take_damage(damage)
+        self.combat_action_message = f"You attacked the {self.enemy.name} for {damage} damage!"
+
+        if not self.enemy.is_alive():
+            self.combat_action_message += " You defeated the Wisp!"
+            self.player.increase_exp()
+            self.end_combat()
+        else:
+            self.enemy_attack()
+
+    def enemy_attack(self):
+        self.player.take_damage(self.enemy.attack_power)
+        self.combat_action_message = f"The {self.enemy.name} attacked you for {self.enemy.attack_power} damage!"
+        if self.player.game_over:
+            print("You have been defeated!")
+            self.game_instance.change_state("title_screen")
+
+    def player_act(self):
+        roll = random.randint(1, 5)  # Roll a random number between 1 and 10
+        if roll <= 3:
+            self.enemy.friendship += 1  # Increase friendship level
+            self.combat_action_message = f"You told a joke to the {self.enemy.name}!"
+            if self.enemy.friendship >= 3:
+                self.combat_action_message += f" The {self.enemy.name} laughs and runs off!"
+                self.end_combat()
+            else:
+                self.enemy_attack()
+        else:
+            self.combat_action_message = f"The {self.enemy.name} is not impressed."
+            self.enemy_attack()
+
+    def player_heal(self):
+        self.combat_action_message = "You drank a health potion."
+        self.player.heal(20)
+        self.combat_action_message += f" Your HP is now {self.player.hp}/{self.player.maxhp}."
+
+        # After healing, enemy attacks
+        self.enemy_attack()
+
+    def player_flee(self):
+        roll = random.randint(1, 10)  # Roll a random number between 1 and 10
+        if roll <= 5:
+            self.combat_action_message = "You fled the battle!"
+            self.end_combat()
+        else:
+            self.combat_action_message = "You couldn't flee!"
+            self.enemy_attack()
+
+    def end_combat(self):
+        self.combat_active = False
+        self.combat_action_message += " Combat ends."
+        self.dialogue_start_time = time.time()  # Set time for last message display
